@@ -1,0 +1,108 @@
+import 'dotenv/config'
+
+import express from 'express'
+import { conexao } from './conexao'
+
+const app = express()
+
+app.use(express.json())
+
+app.get('/', async (req, res) => {
+	try {
+		const query = `
+			select f.id, f.cep, f.rua, f.cidade, f.estado, f.pais, f.empresa_id, e.nome, e.site 
+			from empresas as e
+			left join filiais as f on e.id = f.empresa_id;
+		`
+		const resposta = await conexao.query(query)
+
+		const filiais = resposta.rows.map(filial => {
+			return {
+				id: filial.id,
+				cep: filial.cep,
+				rua: filial.rua,
+				cidade: filial.cidade,
+				estado: filial.estado,
+				pais: filial.pais,
+				empresa: {
+					id: filial.empresa_id,
+					nome: filial.nome,
+					site: filial.site
+				}
+			}
+		})
+
+		return res.json(filiais)
+	} catch (error) {
+		const erro = error as Error
+		return res.status(400).json(erro.message)
+	}
+})
+
+app.get('/funcionarios', async (req, res) => {
+	const { pagina = 1, porPagina = 10 } = req.query
+	
+	const offset = pagina === 1 ? 0 : (Number(pagina) - 1) * Number(porPagina)
+
+	try {
+		const query = 'select * from pessoas order by id asc limit $1 offset $2'
+		const { rows } = await conexao.query(query, [porPagina, offset])
+
+		const totalRegistros = await conexao.query('select count(*) from pessoas')
+
+		const resposta = {
+			pagina,
+			porPagina,
+			total: totalRegistros.rows[0].count,
+			registros: rows
+		}
+
+		return res.json(resposta)
+	} catch (error) {
+		const erro = error as Error
+		return res.status(400).json(erro.message)
+	}
+})
+
+app.get('/:id', async (req, res) => {
+	const { id } = req.params
+	try {
+		const query = `
+			select f.id, f.cep, f.rua, f.cidade, f.estado, f.pais, f.empresa_id, e.nome, e.site 
+			from empresas as e
+			left join filiais as f on e.id = f.empresa_id
+			where e.id = $1;
+		`
+
+		const resposta = await conexao.query(query, [id])
+
+		const {empresa_id, nome, site} = resposta.rows[0]
+
+		const filiais = resposta.rows.map(filial => {
+			return {
+				id: filial.id,
+				cep: filial.cep,
+				rua: filial.rua,
+				cidade: filial.cidade,
+				estado: filial.estado,
+				pais: filial.pais
+			}
+		})
+
+		const empresa = {
+			id: empresa_id,
+			nome,
+			site,
+			filiais
+		}
+
+		return res.json(empresa)
+	} catch (error) {
+		const erro = error as Error
+		return res.status(400).json(erro.message)
+	}
+})
+
+app.listen(process.env.PORT, () => {
+	console.log('Servidor inicializado!')
+})
