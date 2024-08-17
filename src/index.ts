@@ -39,6 +39,32 @@ app.get('/', async(req, res) => {
 		return res.status(400).json(erro.message) 
 	}
 })
+//TRABALHANDO A PAGINAÇÃO
+app.get('/funcionarios', async (req, res)=>{
+	const { pagina = 1, porPagina = 10 } = req.query
+	
+	const offset = pagina === 1 ? 0 : (Number(pagina) - 1) * Number(porPagina)
+	
+	
+	try {
+		const query = 'select * from pessoas order by id asc limit $1 offset $2'
+		const {rows} = await conexao.query(query, [porPagina, offset])
+
+		const {rowCount} = await conexao.query('select * from pessoas')
+
+		const resposta ={
+			pagina,
+			porPagina,
+			total: rowCount,
+			registros: rows 
+		}
+
+		return res.json(resposta)
+	} catch (error) {
+		const erro = error as Error
+		return res.status(400).json(erro.message)
+	}
+})
 app.get('/:id', async(req, res) => {
 	const { id } = req.params
 	try {
@@ -77,7 +103,6 @@ app.get('/:id', async(req, res) => {
 		return res.status(400).json(erro.message)
 	}
 })
-
 
 app.listen(process.env.PORT, () => {
 	console.log(`Server started on port ${process.env.PORT}`)
