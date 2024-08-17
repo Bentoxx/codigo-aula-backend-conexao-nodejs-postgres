@@ -1,16 +1,15 @@
 import 'dotenv/config'
 
 import express from 'express'
-import { client } from './conexao'
+import { conexao } from './conexao'
 
 const app = express()
 
 app.use(express.json())
 
 app.get('/', async(req, res) => {
-	await client.connect()
-	const resposta = await client.query('select * from empresas')
-	await client.end()
+	const resposta = await conexao.query('select * from empresas')
+
 
 	return res.json(resposta.rows)
 })
