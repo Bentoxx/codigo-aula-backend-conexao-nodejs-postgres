@@ -12,7 +12,7 @@ app.get('/', async(req, res) => {
 	const resposta = await client.query('select * from empresas')
 	await client.end()
 
-	return res.json(resposta)
+	return res.json(resposta.rows)
 })
 
 
